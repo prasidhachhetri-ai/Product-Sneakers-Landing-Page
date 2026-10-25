@@ -8,13 +8,42 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function allowedOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  const configured = [process.env.FRONTEND_URL, process.env.NEXT_PUBLIC_SITE_URL].filter(Boolean).map((url) => {
-    try { return new URL(url as string).origin; } catch { return ""; }
-  });
-  if (configured.length === 0 && process.env.NODE_ENV !== "production") return true;
-  return configured.includes(origin);
+  const requestOrigin = request.headers.get("origin");
+  if (!requestOrigin) return true;
+
+  const allowed = new Set<string>();
+  const addUrl = (value?: string | null) => {
+    if (!value) return;
+    try {
+      allowed.add(new URL(value).origin);
+    } catch {
+      // Ignore malformed optional configuration values.
+    }
+  };
+
+  // Always accept the origin that is actually serving this API route. This is
+  // what allows a Vercel custom domain or preview domain to work without having
+  // to update an environment variable for every deployment.
+  addUrl(request.nextUrl.origin);
+
+  const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const protocol = forwardedProtocol || request.nextUrl.protocol.replace(":", "") || "https";
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || request.headers.get("host")?.split(",")[0]?.trim();
+  if (host) addUrl(`${protocol}://${host}`);
+
+  addUrl(process.env.FRONTEND_URL);
+  addUrl(process.env.NEXT_PUBLIC_SITE_URL);
+  if (process.env.VERCEL_URL) addUrl(`https://${process.env.VERCEL_URL}`);
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) addUrl(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
+
+  if (allowed.size === 0 && process.env.NODE_ENV !== "production") return true;
+
+  try {
+    return allowed.has(new URL(requestOrigin).origin);
+  } catch {
+    return false;
+  }
 }
 
 function makeOrderId() {
