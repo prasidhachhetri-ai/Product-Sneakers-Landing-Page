@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 104" role="img" aria-labelledby="title desc">
+  <title id="title">Sneakers Nepal</title>
+  <desc id="desc">A rectangular Sneakers Nepal wordmark with a colorful high-top sneaker icon.</desc>
+  <rect x="2" y="2" width="396" height="100" rx="16" fill="#f7f2e9" stroke="#e5b95c" stroke-width="4"/>
+  <path d="M13 74c8-8 15-16 20-24l7-24c1-5 5-8 10-6l28 10c7 2 11 7 12 14l3 16 14 7c7 3 11 8 11 15v2H14c-4-4-4-7-1-10Z" fill="#39c6bd" stroke="#201a17" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M47 22 73 31c6 2 10 7 11 13l4 20-22 12-20-13 7-20Z" fill="#d94b57"/>
+  <path d="M40 27c2-7 6-10 12-7l27 10c7 2 11 7 12 14l3 17" fill="none" stroke="#f59e0b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M87 62c8 1 16 3 23 7 4 3 7 7 8 13H91Z" fill="#f59e0b"/>
+  <path d="M68 39 91 51M66 47l27 13M64 55l30 14M62 63l26 12" fill="none" stroke="#201a17" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="67" cy="38" r="2.5" fill="#f7f2e9"/><circle cx="65" cy="47" r="2.5" fill="#f7f2e9"/><circle cx="63" cy="56" r="2.5" fill="#f7f2e9"/><circle cx="61" cy="64" r="2.5" fill="#f7f2e9"/>
+  <path d="M13 76c21 4 42 8 61 10 17 2 31 1 44-2v8c-20 5-44 6-69 2-14-2-26-5-36-9Z" fill="#f7f2e9"/>
+  <path d="M13 85c25 7 50 10 74 9 11 0 21-1 31-3v6c-24 6-52 6-83 0-10-2-17-4-22-7Z" fill="#4376c9"/>
+  <path d="M122 15v74" stroke="#e5b95c" stroke-width="3" stroke-linecap="round"/>
+  <text x="137" y="46" fill="#201a17" font-family="Arial Black, Impact, Arial, sans-serif" font-size="31" font-weight="900" letter-spacing="1.4">SNEAKERS</text>
+  <text x="137" y="79" fill="#a45438" font-family="Arial Black, Impact, Arial, sans-serif" font-size="27" font-weight="900" letter-spacing="7">NEPAL</text>
+  <circle cx="316" cy="71" r="3.5" fill="#e5b95c"/>
+  <text x="328" y="75" fill="#201a17" opacity=".68" font-family="Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="1.1">EST. 2026</text>
+</svg>

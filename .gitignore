@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+.vercel
+.env
+.env.local
+.env.*.local
+sneakers-landing-page-6ceab0512fdf.JSON
+npm-debug.log*
+*.log
+README.private.md
+*service-account*.json
+*.tsbuildinfo
+next-env.d.ts
