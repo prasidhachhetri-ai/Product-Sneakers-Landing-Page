@@ -6,7 +6,8 @@ A responsive Air Jordan 4 landing page and Cash on Delivery ordering flow built 
 
 - Responsive design for desktop, tablet, and mobile
 - Complete Air Jordan 4 colorway gallery
-- Size, quantity, and delivery-area selection
+- Mixed-color cart with size and quantity controls for every selected pair
+- Delivery-area selection with automatic totals
 - Checkout with matching selected product imagery
 - Google Sheets order storage
 - Business and customer email confirmations

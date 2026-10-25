@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CheckCircle2, Loader2, LockKeyhole, Mail, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, LockKeyhole, Mail, MapPin, Minus, Phone, Plus, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { calculateOrderTotal, DeliveryArea, formatNpr, product } from "@/lib/product";
 
 type Fields = { fullName: string; phone: string; email: string; location: string };
+type CartItem = { imageIndex: number; size: number; quantity: number };
 const initialFields: Fields = { fullName: "", phone: "", email: "", location: "" };
+const MAX_ORDER_QUANTITY = 20;
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -16,17 +18,17 @@ export function CheckoutForm() {
   const parsedQty = Number(params.get("qty") || 1);
   const parsedSize = Number(params.get("size") || 41);
   const parsedImageIndex = Number(params.get("image") || 0);
-  const quantity = Number.isInteger(parsedQty) && parsedQty >= 1 && parsedQty <= 10 ? parsedQty : 1;
-  const size = product.sizes.includes(parsedSize as never) ? parsedSize : 41;
+  const initialQuantity = Number.isInteger(parsedQty) && parsedQty >= 1 && parsedQty <= 10 ? parsedQty : 1;
+  const initialSize = product.sizes.includes(parsedSize as never) ? parsedSize : 41;
   const initialImageIndex = Number.isInteger(parsedImageIndex) && parsedImageIndex >= 0 && parsedImageIndex < product.images.length ? parsedImageIndex : 0;
-  const [selectedImageIndex, setSelectedImageIndex] = useState(initialImageIndex);
-  const selectedImage = product.images[selectedImageIndex];
+  const [items, setItems] = useState<CartItem[]>([{ imageIndex: initialImageIndex, size: initialSize, quantity: initialQuantity }]);
   const [fields, setFields] = useState(initialFields);
   const [deliveryArea, setDeliveryArea] = useState<DeliveryArea>("inside");
   const [errors, setErrors] = useState<Partial<Record<keyof Fields, string>>>({});
   const [status, setStatus] = useState<{ type: "idle" | "loading" | "error"; message?: string }>({ type: "idle" });
   const requestId = useRef("");
-  const pricing = useMemo(() => calculateOrderTotal(quantity, deliveryArea), [quantity, deliveryArea]);
+  const totalQuantity = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+  const pricing = useMemo(() => calculateOrderTotal(totalQuantity, deliveryArea), [totalQuantity, deliveryArea]);
 
   useEffect(() => {
     router.prefetch("/thank-you");
@@ -36,6 +38,33 @@ export function CheckoutForm() {
   const update = (key: keyof Fields, value: string) => {
     setFields((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const addColorway = (imageIndex: number) => {
+    setItems((current) => {
+      if (current.some((item) => item.imageIndex === imageIndex) || current.reduce((sum, item) => sum + item.quantity, 0) >= MAX_ORDER_QUANTITY) return current;
+      return [...current, { imageIndex, size: initialSize, quantity: 1 }];
+    });
+  };
+
+  const updateItem = (imageIndex: number, changes: Partial<Pick<CartItem, "size" | "quantity">>) => {
+    setItems((current) => current.map((item) => item.imageIndex === imageIndex ? { ...item, ...changes } : item));
+  };
+
+  const changeQuantity = (imageIndex: number, change: number) => {
+    setItems((current) => {
+      const currentTotal = current.reduce((sum, item) => sum + item.quantity, 0);
+      return current.map((item) => {
+        if (item.imageIndex !== imageIndex) return item;
+        const nextQuantity = Math.max(1, Math.min(10, item.quantity + change));
+        if (change > 0 && currentTotal >= MAX_ORDER_QUANTITY) return item;
+        return { ...item, quantity: nextQuantity };
+      });
+    });
+  };
+
+  const removeItem = (imageIndex: number) => {
+    setItems((current) => current.length === 1 ? current : current.filter((item) => item.imageIndex !== imageIndex));
   };
 
   const validate = () => {
@@ -57,11 +86,12 @@ export function CheckoutForm() {
       const response = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId: requestId.current, ...fields, deliveryArea, productName: product.name, imageIndex: selectedImageIndex, quantity, size }),
+        body: JSON.stringify({ requestId: requestId.current, ...fields, deliveryArea, productName: product.name, items }),
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || "We could not submit your order. Please try again.");
-      const query = new URLSearchParams({ orderId: result.order.orderId, product: product.name, qty: String(quantity), total: String(result.order.totalPrice) });
+      const productSummary = items.length === 1 ? product.name : `${product.name} · ${items.length} colorways`;
+      const query = new URLSearchParams({ orderId: result.order.orderId, product: productSummary, qty: String(totalQuantity), total: String(result.order.totalPrice) });
       router.push(`/thank-you?${query.toString()}`);
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Something went wrong. Please try again." });
@@ -109,23 +139,44 @@ export function CheckoutForm() {
         </section>
 
         <aside className="rounded-4xl bg-ink p-5 text-white sm:p-8 lg:sticky lg:top-6">
-          <p className="eyebrow text-volt">YOUR ORDER</p>
-          <div className="mt-5 flex gap-5"><div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-2xl bg-white shadow-lg"><Image src={selectedImage} alt={`${product.name} ${product.colorways[selectedImageIndex]}`} fill unoptimized sizes="128px" className="object-contain" priority /></div><div className="pt-2"><h2 className="text-xl font-black">{product.name}</h2><p className="mt-1 text-sm font-semibold text-volt">{product.colorways[selectedImageIndex]}</p><p className="mt-2 text-sm text-white/50">EU Size {size} · Qty {quantity}</p><p className="mt-4 text-sm font-bold">{formatNpr(product.price)} / pair</p></div></div>
+          <div className="flex items-center justify-between gap-4"><p className="eyebrow text-volt">YOUR ORDER</p><span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-black">{totalQuantity} {totalQuantity === 1 ? "pair" : "pairs"}</span></div>
           <div className="mt-6">
-            <div className="flex items-center justify-between gap-4"><p className="text-sm font-black uppercase tracking-wider">Choose colorway</p><p className="text-xs text-white/45">{selectedImageIndex + 1} of {product.images.length}</p></div>
+            <div className="flex items-end justify-between gap-4"><div><p className="text-sm font-black uppercase tracking-wider">Add colorways</p><p className="mt-1 text-xs text-white/45">Tap any shoe to add it to this order.</p></div><p className="shrink-0 text-xs text-white/45">{items.length} selected</p></div>
             <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5">
-              {product.images.map((image, index) => (
-                <button
-                  key={image}
-                  type="button"
-                  onClick={() => setSelectedImageIndex(index)}
-                  aria-label={`Select ${product.colorways[index]} colorway`}
-                  aria-pressed={selectedImageIndex === index}
-                  title={product.colorways[index]}
-                  className={`group relative aspect-square overflow-hidden rounded-xl bg-white transition focus:outline-none focus:ring-4 focus:ring-volt/30 ${selectedImageIndex === index ? "ring-2 ring-volt" : "opacity-75 ring-1 ring-white/15 hover:opacity-100"}`}
-                >
-                  <Image src={image} alt="" fill unoptimized sizes="72px" className="object-contain p-1 transition-transform group-hover:scale-105" />
-                </button>
+              {product.images.map((image, index) => {
+                const selected = items.some((item) => item.imageIndex === index);
+                return (
+                  <button
+                    key={image}
+                    type="button"
+                    onClick={() => addColorway(index)}
+                    disabled={selected || totalQuantity >= MAX_ORDER_QUANTITY}
+                    aria-label={selected ? `${product.colorways[index]} is already in your order` : `Add ${product.colorways[index]} to your order`}
+                    aria-pressed={selected}
+                    title={selected ? `${product.colorways[index]} — added` : `Add ${product.colorways[index]}`}
+                    className={`group relative aspect-square overflow-hidden rounded-xl bg-white transition focus:outline-none focus:ring-4 focus:ring-volt/30 ${selected ? "ring-2 ring-volt" : "opacity-75 ring-1 ring-white/15 hover:opacity-100"}`}
+                  >
+                    <Image src={image} alt="" fill unoptimized sizes="72px" className="object-contain p-1 transition-transform group-hover:scale-105" />
+                    {selected && <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-volt text-[11px] font-black text-ink"><CheckCircle2 size={13} strokeWidth={3} /></span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="mt-7 border-t border-white/10 pt-6">
+            <div className="flex items-center justify-between gap-4"><p className="text-sm font-black uppercase tracking-wider">Selected pairs</p><p className="text-xs text-white/45">Max {MAX_ORDER_QUANTITY} pairs</p></div>
+            <div className="mt-3 space-y-3">
+              {items.map((item) => (
+                <article key={item.imageIndex} className="rounded-2xl border border-white/10 bg-white/[.06] p-3">
+                  <div className="flex gap-3">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-white"><Image src={product.images[item.imageIndex]} alt={`${product.name} ${product.colorways[item.imageIndex]}`} fill unoptimized sizes="80px" className="object-contain p-1" /></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h2 className="truncate text-base font-black">{product.colorways[item.imageIndex]}</h2><p className="mt-1 text-xs font-semibold text-volt">{formatNpr(product.price)} / pair</p></div><button type="button" onClick={() => removeItem(item.imageIndex)} disabled={items.length === 1} aria-label={`Remove ${product.colorways[item.imageIndex]}`} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/45 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25"><Trash2 size={15} /></button></div>
+                      <label className="mt-2 flex items-center gap-2 text-xs text-white/50"><span>Size</span><select value={item.size} onChange={(event) => updateItem(item.imageIndex, { size: Number(event.target.value) })} aria-label={`Size for ${product.colorways[item.imageIndex]}`} className="rounded-lg border border-white/15 bg-ink px-2 py-1.5 text-xs font-bold text-white outline-none focus:border-volt">{product.sizes.map((shoeSize) => <option key={shoeSize} value={shoeSize}>EU {shoeSize}</option>)}</select></label>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3"><span className="text-xs text-white/50">Quantity</span><div className="flex items-center gap-2 rounded-full bg-white/10 p-1"><button type="button" onClick={() => changeQuantity(item.imageIndex, -1)} disabled={item.quantity === 1} aria-label={`Decrease ${product.colorways[item.imageIndex]} quantity`} className="grid h-7 w-7 place-items-center rounded-full hover:bg-white/10 disabled:opacity-30"><Minus size={13} /></button><span className="w-5 text-center text-sm font-black">{item.quantity}</span><button type="button" onClick={() => changeQuantity(item.imageIndex, 1)} disabled={item.quantity === 10 || totalQuantity >= MAX_ORDER_QUANTITY} aria-label={`Increase ${product.colorways[item.imageIndex]} quantity`} className="grid h-7 w-7 place-items-center rounded-full hover:bg-white/10 disabled:opacity-30"><Plus size={13} /></button></div></div>
+                </article>
               ))}
             </div>
           </div>

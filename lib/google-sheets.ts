@@ -203,6 +203,12 @@ export async function findOrCreateSheetOrder(order: StoredOrder): Promise<SheetO
   }
 
   const notifications = { ownerEmailSent: false, customerEmailSent: false };
+  const pairBreakdown = order.items
+    .map((item, index) => `${index + 1}. ${item.colorway} | EU ${item.size} | Qty ${item.quantity} | Rs ${item.lineTotal.toLocaleString("en-IN")}`)
+    .join("\n");
+  const productSummary = order.items.length === 1
+    ? `${order.productName} — ${order.items[0].colorway}`
+    : `${order.productName} — Mixed order (${order.items.length} colorways)`;
   const append = await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: `${tab}!A:S`,
@@ -210,8 +216,8 @@ export async function findOrCreateSheetOrder(order: StoredOrder): Promise<SheetO
     insertDataOption: "INSERT_ROWS",
     requestBody: { values: [[
       order.orderId, order.createdAt, order.fullName, order.phone, order.email, order.location,
-      `${order.productName} — ${order.colorway}`, order.quantity, order.pricePerPiece, order.totalPrice,
-      order.paymentMethod, order.orderStatus, "",
+      productSummary, order.quantity, order.pricePerPiece, order.totalPrice,
+      order.paymentMethod, order.orderStatus, pairBreakdown,
       order.size, order.deliveryArea === "inside" ? "Inside Kathmandu Valley" : "Outside Kathmandu Valley",
       order.deliveryFee, "Pending", "Pending", order.requestId,
     ]] },

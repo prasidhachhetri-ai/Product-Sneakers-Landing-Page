@@ -69,19 +69,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: parsed.error.issues[0]?.message || "Please check your order details.", fields: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
     const input = parsed.data;
-    const pricing = calculateOrderTotal(input.quantity, input.deliveryArea);
-    const selection = getProductSelection(input.imageIndex);
+    const items = input.items.map((item) => {
+      const selection = getProductSelection(item.imageIndex);
+      return { ...item, colorway: selection.colorway, productImage: selection.image, lineTotal: item.quantity * product.price };
+    });
+    const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
+    const pricing = calculateOrderTotal(quantity, input.deliveryArea);
     const order: StoredOrder = {
       ...input,
+      items,
       orderId: makeOrderId(),
       createdAt: kathmanduDate(),
+      quantity,
       pricePerPiece: product.price,
       deliveryFee: pricing.deliveryFee,
       totalPrice: pricing.total,
       paymentMethod: "Cash On Delivery",
       orderStatus: "New Order",
-      colorway: selection.colorway,
-      productImage: selection.image,
+      colorway: items.map((item) => item.colorway).join(", "),
+      size: items.map((item) => `EU ${item.size}`).join(", "),
+      productImage: items[0].productImage,
     };
 
     const sheetOrder = await findOrCreateSheetOrder(order);
