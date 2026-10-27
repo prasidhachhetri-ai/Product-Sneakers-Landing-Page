@@ -12,7 +12,7 @@ export function ProductShop() {
   }, []);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-2">
       <ProductGallery active={selectedImageIndex} onActiveChange={setSelectedImageIndex} />
       <ProductPurchase selectedImageIndex={selectedImageIndex} />
     </div>
